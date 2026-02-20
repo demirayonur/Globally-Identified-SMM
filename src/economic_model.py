@@ -585,17 +585,21 @@ class RustBusEngine:
 
     def compute_data_moments(self, states, actions):
         """
-        Compute empirical moments from panel data.
+        Compute empirical moments from panel data using DISCOUNTED weights.
 
         These are sample analogs of the population moments computed
         by compute_moments(). The SMM estimator finds parameters
         that make the model moments close to these data moments.
 
-        m_hat_1 = (1/NT) * sum_{n,t} 1{a_nt = 1}           (replacement rate)
-        m_hat_2 = (1/NT) * sum_{n,t} s_nt                  (average mileage)
-        m_hat_3 = (1/NT) * sum_{n,t} s_nt * 1{a_nt = 1}    (mileage x replace)
-        m_hat_4 = (1/NT) * sum_{n,t} s_nt^2                (second moment of mileage)
-        m_hat_5 = (1/NT) * sum_{n,t} s_nt^2 * 1{a_nt = 1}  (sq mileage x replace)
+        IMPORTANT: We use discounted weights (1-beta)*beta^t to match
+        the discounted occupancy measure used in compute_moments().
+        Simple (1/NT) averages would converge to ERGODIC moments,
+        which differ from the discounted population moments whenever
+        the initial distribution mu is not the stationary distribution.
+
+        m_hat_l = (1/N) * sum_n sum_t (1-beta)*beta^t * h_l(s_nt, a_nt)
+
+        For large T, the truncation error is negligible since beta^T ≈ 0.
 
         Parameters
         ----------
@@ -609,20 +613,33 @@ class RustBusEngine:
         moments : ndarray, shape (5,)
             The empirical moment vector.
         """
-        # Total number of observations = buses x periods
-        NT = states.size
+        N, T = states.shape
 
-        # Indicator for replacement: 1 if action=1, 0 if action=0
-        replace_indicator = (actions == 1).astype(float)
+        # Build the discounted weight for each period:
+        #   w[t] = (1 - beta) * beta^t
+        #
+        # These sum to approximately 1 for large T:
+        #   sum_{t=0}^{T-1} (1-beta)*beta^t = 1 - beta^T ≈ 1
+        #
+        # The (1-beta) factor normalizes so that weights sum to 1,
+        # making the discounted moment a proper weighted average.
+        # This matches nu_bar^{-1} * lambda in compute_moments().
+        w = (1.0 - self.beta) * (self.beta ** np.arange(T))  # shape (T,)
 
-        # Squared mileage
+        # Broadcast weights across all buses: shape (1, T) * (N, T) = (N, T)
+        # Each bus gets the same time weights.
+        weighted_replace = (actions == 1).astype(float) * w[np.newaxis, :]
+        weighted_states = states.astype(float) * w[np.newaxis, :]
+        weighted_all = w[np.newaxis, :] * np.ones((N, T))
         states_sq = states.astype(float) ** 2
+        weighted_states_sq = states_sq * w[np.newaxis, :]
 
-        # Sample averages
-        m1 = np.sum(replace_indicator) / NT    # fraction of replacements
-        m2 = np.sum(states) / NT                # average mileage
-        m3 = np.sum(states * replace_indicator) / NT  # avg mileage x replace
-        m4 = np.sum(states_sq) / NT             # second moment of mileage
-        m5 = np.sum(states_sq * replace_indicator) / NT  # sq mileage x replace
+        # Average across buses (each bus is an independent draw from mu)
+        # m_hat = (1/N) * sum_n [sum_t w[t] * h(s_nt, a_nt)]
+        m1 = np.sum(weighted_replace) / N                          # replace freq
+        m2 = np.sum(weighted_states) / N                            # avg mileage
+        m3 = np.sum(states.astype(float) * weighted_replace) / N   # mileage x replace
+        m4 = np.sum(weighted_states_sq) / N                         # mileage^2
+        m5 = np.sum(states_sq * weighted_replace) / N               # mileage^2 x replace
 
         return np.array([m1, m2, m3, m4, m5])
