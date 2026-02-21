@@ -47,8 +47,8 @@ print(sep)
 # discount factor. These are FIXED — not estimated.
 
 model = RustBusEngine(
-    n_s=200,                         # 100 mileage bins
-    beta=0.75,                       # discount factor
+    n_s=10,                         # 100 mileage bins
+    beta=0.95,                       # discount factor
     trans_probs=(0.4, 0.5, 0.1)      # mileage transition probs
 )
 
@@ -135,8 +135,8 @@ print(f"    m5 = {data_moments[4]:.6f}  "
 # THIS IS THE SAME GRID FOR ALL THREE ESTIMATORS.
 # Fair comparison requires searching the same set of candidates.
 
-theta1_grid = np.linspace(0.5, 5.0, 100)   # 19 values from 0.5 to 5.0
-RC_grid = np.linspace(5.0, 30.0, 100)      # 21 values from 5.0 to 30.0
+theta1_grid = np.linspace(0.5, 5.0, 30)   # 19 values from 0.5 to 5.0
+RC_grid = np.linspace(5.0, 30.0, 30)      # 21 values from 5.0 to 30.0
 total_grid = len(theta1_grid) * len(RC_grid)
 
 print(f"\nParameter grid (SAME for all estimators):")
