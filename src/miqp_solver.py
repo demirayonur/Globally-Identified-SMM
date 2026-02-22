@@ -115,7 +115,7 @@ class MIQPSolver:
         self.W = W if W is not None else np.eye(len(data_moments))
 
         # Store frequently used quantities
-        self.n_s = model.n_s           # number of states
+        self.n_s = model.n_s            # number of states
         self.beta = model.beta          # discount factor
         self.nu_bar = model.nu_bar      # = 1/(1-beta)
         self.K1 = len(self.theta1_grid) # number of theta1 candidates
@@ -194,8 +194,6 @@ class MIQPSolver:
         # =============================================================
         # CREATE THE GUROBI MODEL
         # =============================================================
-        # Think of the Gurobi model as a "blank canvas" where we'll
-        # add variables, constraints, and an objective function.
         grb = gp.Model("Rust_MIQP")
 
         # Suppress solver output unless verbose mode is on
@@ -209,9 +207,6 @@ class MIQPSolver:
         # =============================================================
         # DECISION VARIABLES
         # =============================================================
-        # These are the "unknowns" that Gurobi will determine.
-        # Some are continuous (can take any value in a range),
-        # some are binary (can only be 0 or 1).
 
         # ----- V[s]: Value function -----
         # One continuous variable per state. Can be any real number
@@ -275,7 +270,7 @@ class MIQPSolver:
             )
 
         # ----- e[l]: Moment gap -----
-        # Five continuous variables, one per moment.
+        # L continuous variables, one per moment.
         # e[l] = data_moment[l] - model_moment[l]
         # The objective minimizes e'We, so these capture the
         # "distance" between data and model.

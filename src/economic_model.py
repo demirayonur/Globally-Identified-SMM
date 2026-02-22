@@ -489,7 +489,7 @@ class RustBusEngine:
         V, policy = self.solve_bellman(theta1, RC)
         lam = self.compute_occupancy_measure(policy)
         model_moments = self.compute_moments(lam)
-
+ 
         # Compute the moment gap
         e = data_moments - model_moments  # shape (5,)
 
